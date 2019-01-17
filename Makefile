@@ -2,6 +2,9 @@ CFLAGS += -Wall -Wextra -Wpedantic -Waggregate-return -Wwrite-strings -Wvla -Wfl
 
 CFLAGS += -std=c11
 
+CFLAGS +=-D_XOPEN_SOURCE=700
+
+
 OUTPUT = -o bin/relay
 
 relay: dispatcher listener
