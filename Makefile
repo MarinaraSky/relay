@@ -4,19 +4,22 @@ CFLAGS += -std=c11
 
 OUTPUT = -o bin/relay
 
-relay: src/dispatcher.o src/listener.o
-	$(CC) $(CFLAGS) $^ $(OUTPUT)
+relay: dispatcher listener
+
+dispatcher: src/dispatcher.o
+	$(CC) $(CFLAGS) $^ -o ./bin/dispatcher
+
+listener: src/listener.o
+	$(CC) $(CFLAGS) $^ -o ./bin/listener
 
 debug: CFLAGS += -g
-debug: src/dispatcher.o src/listener.o
-	$(CC) $(CFLAGS) $^ $(OUTPUT)
+debug: dispatcher listener
 
 profile: CFLAGS += -pg
-profile: src/dispatcher.o src/listener.o
-	$(CC) $(CFLAGS) $^ $(OUTPUT)
+profile: dispatcher listener
 
 .PHONY: clean
 
 clean:
-	rm -f *.o *.out ./src/*.o 
+	rm -f *.o *.out ./src/*.o ./bin/dispatcher ./bin/listener
 
