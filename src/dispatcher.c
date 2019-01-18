@@ -71,7 +71,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 		struct sockaddr_in address = {
 			.sin_family = AF_INET,
 			.sin_addr.s_addr = INADDR_ANY,
-			.sin_port = portNum
+			.sin_port = htons(portNum)
 		};
 
 		socketStruct mySock ={
@@ -87,9 +87,20 @@ int main(int argc, __attribute__((unused))  char **argv)
 		}
 		pthread_t p1;
 		pthread_create(&p1, NULL, (func_f)listenConnection, &mySock);
+		pthread_detach(p1);
 		while(1)
 		{
-			sleep(1);
+			char *line;
+			long unsigned lineLen;
+			printf("Enter Message\n");
+			getline(&line, &lineLen, stdin);
+			llist *index = head;
+			while(index != NULL)
+			{
+				printf("Sending: %d\n", index->fileDesc);
+				send(index->fileDesc, line, sizeof(line), 0);
+				index = index->next;
+			}
 		}
 	}
 	else
@@ -103,12 +114,13 @@ int main(int argc, __attribute__((unused))  char **argv)
 void *listenConnection(socketStruct *mySock)
 {
 	int socketNum = 0;
+	listen(mySock->socketFd, 2);
 	while(1)
 	{
-		listen(mySock->socketFd, 2);
 		socketNum = accept(mySock->socketFd, mySock->address, (socklen_t *)&mySock->sockaddrlen);
 		if(socketNum > 0)
 		{
+			printf("Creating: %d \n", socketNum);
 			addConnection(socketNum);
 		}
 	}
@@ -117,6 +129,10 @@ void *listenConnection(socketStruct *mySock)
 void addConnection(int socketNum)
 {
 	llist *index = head;
+	if(head == NULL)
+	{
+		head = newConnection(socketNum);
+	}
 	while(index != NULL)
 	{
 		index = index->next;
