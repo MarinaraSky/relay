@@ -4,16 +4,15 @@ CFLAGS += -std=c11
 
 CFLAGS +=-D_XOPEN_SOURCE=700 -pthread
 
-
-OUTPUT = -o bin/relay
+comp = $(CC) $(CFLAGS) $^ -o ./bin/$@
 
 relay: dispatcher listener
 
 dispatcher: src/dispatcher.o
-	$(CC) $(CFLAGS) $^ -o ./bin/dispatcher
+	$(comp)
 
 listener: src/listener.o
-	$(CC) $(CFLAGS) $^ -o ./bin/listener
+	$(comp)
 
 debug: CFLAGS += -g
 debug: dispatcher listener
