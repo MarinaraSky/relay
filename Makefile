@@ -2,15 +2,17 @@ CFLAGS += -Wall -Wextra -Wpedantic -Waggregate-return -Wwrite-strings -Wvla -Wfl
 
 CFLAGS += -std=c11
 
-OUTPUT = -o bin/relay
+CFLAGS +=-D_XOPEN_SOURCE=700 -pthread
+
+comp = $(CC) $(CFLAGS) $^ -o ./bin/$@
 
 relay: dispatcher listener
 
 dispatcher: src/dispatcher.o
-	$(CC) $(CFLAGS) $^ -o ./bin/dispatcher
+	$(comp)
 
 listener: src/listener.o
-	$(CC) $(CFLAGS) $^ -o ./bin/listener
+	$(comp)
 
 debug: CFLAGS += -g
 debug: dispatcher listener
