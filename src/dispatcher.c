@@ -34,6 +34,7 @@ void ignoreSIGINT(__attribute__((unused))int sig_num)
 }
 
 static llist *head = NULL;
+static pthread_mutex_t lock;
 
 int main(int argc, __attribute__((unused))  char **argv)
 {
@@ -89,6 +90,11 @@ int main(int argc, __attribute__((unused))  char **argv)
 			exit(1);
 		}
 		pthread_t p1;
+		if(pthread_mutex_init(&lock, NULL) != 0)
+		{
+			perror("Mutex Failed.");
+			exit(1);
+		}
 		pthread_create(&p1, NULL, (func_f)listenConnection, &mySock);
 		pthread_detach(p1);
 		while(1)
@@ -103,9 +109,11 @@ int main(int argc, __attribute__((unused))  char **argv)
 				{
 					destroyLL();
 				}
+				pthread_mutex_destroy(&lock);
 				exit(1);
 			}
 			llist *index = head;
+			pthread_mutex_lock(&lock);
 			while(index != NULL)
 			{
 				//check to see if still listening
@@ -116,6 +124,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 				}
 				index = index->next;
 			}
+			pthread_mutex_unlock(&lock);
 			free(line);
 		}
 	}
@@ -136,7 +145,9 @@ void *listenConnection(socketStruct *mySock)
 		socketNum = accept(mySock->socketFd, mySock->address, (socklen_t *)&mySock->sockaddrlen);
 		if(socketNum > 0)
 		{
+			pthread_mutex_lock(&lock);
 			addConnection(socketNum);
+			pthread_mutex_unlock(&lock);
 		}
 	}
 }
@@ -160,6 +171,11 @@ void addConnection(int socketNum)
 llist *newConnection(int fileDesc)
 {
 	llist *new = malloc(sizeof(new));
+	if(new == NULL)
+	{
+		perror("Out of Memory.");
+		exit(1);
+	}
 	new->fileDesc = fileDesc;
 	new->next = NULL;
 	return new;
@@ -172,15 +188,12 @@ void removeConnection(int fileDesc)
 	if(index->fileDesc == fileDesc)
 	{
 		rem = head;
-		printf("Removing1 %d\n", fileDesc);
 		if(head->next == NULL)
 		{
-			printf("head\n");
 			head = NULL;
 		}
 		else
 		{
-			printf("nothead\n");
 			head = head->next;
 		}
 		free(rem);
@@ -188,7 +201,6 @@ void removeConnection(int fileDesc)
 	}
 	while(index->next->fileDesc != fileDesc)
 	{
-		printf("Removing %d\n", fileDesc);
 		index = index->next;
 	}
 	index->next = index->next->next;
