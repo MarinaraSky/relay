@@ -1,17 +1,37 @@
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <semaphore.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <signal.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <pthread.h>
+
+typedef struct llist
+{
+	int fileDesc;
+	struct llist *next;
+}llist;
+
+typedef struct socketStruct{
+	int socketFd;
+	struct sockaddr *address;
+	int sockaddrlen;
+}socketStruct;
+
+typedef void *(*func_f)(void *);
+
+void *listenConnection(socketStruct *mySock);
+void addConnection(int socketNum);
+llist *newConnection(int fileDesc);
 
 void ignoreSIGINT(int sig_num)
 {
 	fprintf(stderr, "Must hit CTRL+D to exit.\n");
 }
+
+static llist *head = NULL;
 
 int main(int argc, __attribute__((unused))  char **argv)
 {
@@ -25,44 +45,89 @@ int main(int argc, __attribute__((unused))  char **argv)
 		.sa_flags = SA_RESTART
 	};
 	sigaction(SIGINT, &ignore, NULL);
-	char *keyValue = getenv("RELAY");
-	if(keyValue)
+	char *end; 
+	char *relayEnv = getenv("RELAY");
+	if(!relayEnv)
 	{
-		key_t m_unique = ftok(keyValue, 99);
-
-		int message = shmget(m_unique, 4096, 0666|IPC_CREAT);
-		char *test = shmat(message, 0, 0);
-
-		/*
-		key_t l_unique = ftok(keyValue, 66);
-		int testLock = shmget(l_unique, 1024, 0666|IPC_CREAT);
-		sem_t lock = shmat(testLock, 0, 0);
-		sem_init(&lock, 1, 0);
-		*/
-
-		sem_t *lock = sem_open("/test1", O_RDWR | O_CREAT | O_EXCL, 0666, 1);
-
-		
-		int readRet = 0;
-		long unsigned len;
-		while(readRet != -1)
+		fprintf(stderr, "RELAY environmental variable must be set.\n");
+		exit(1);
+	}
+	long portNum = strtol(relayEnv, &end, 0);
+	if(*end == '\0' && portNum > 10024)
+	{
+		int fd = socket(AF_INET, SOCK_STREAM, 0);
+		int opt = 1;
+		if(fd == 0)
 		{
-			sem_wait(lock);
-			printf("Ready For Message.\n");
-			readRet = getline(&test, &len, stdin);
-			sem_post(lock);
+			perror("Unable to create socket.\n");
+			exit(1);
 		}
+		if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, 
+				&opt, sizeof(opt)) != 0)
+		{
+			perror("Unable to set socket options.\n");
+			exit(1);
+		}
+		struct sockaddr_in address = {
+			.sin_family = AF_INET,
+			.sin_addr.s_addr = INADDR_ANY,
+			.sin_port = portNum
+		};
 
-		
-		//shmdt(test);
-		//shmdt(lock);
-		sem_unlink("/test1");
+		socketStruct mySock ={
+			.socketFd = fd,
+			.address = (struct sockaddr *)&address,
+			.sockaddrlen = sizeof(address)
+		};
+
+		if(bind(fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+		{
+			perror("Unable to bind socket.\n");
+			exit(1);
+		}
+		pthread_t p1;
+		pthread_create(&p1, NULL, (func_f)listenConnection, &mySock);
+		while(1)
+		{
+			sleep(1);
+		}
 	}
 	else
 	{
-		fprintf(stderr, "RELAY environmental variable must be set.\n");
+		fprintf(stderr, "RELAY variable must be a number above 10024.\n");
 		exit(1);
 	}
 	return 0;
 }
 
+void *listenConnection(socketStruct *mySock)
+{
+	int socketNum = 0;
+	while(1)
+	{
+		listen(mySock->socketFd, 2);
+		socketNum = accept(mySock->socketFd, mySock->address, (socklen_t *)&mySock->sockaddrlen);
+		if(socketNum > 0)
+		{
+			addConnection(socketNum);
+		}
+	}
+}
+
+void addConnection(int socketNum)
+{
+	llist *index = head;
+	while(index != NULL)
+	{
+		index = index->next;
+	}
+	index = newConnection(socketNum);
+}
+
+llist *newConnection(int fileDesc)
+{
+	llist *new = malloc(sizeof(new));
+	new->fileDesc = fileDesc;
+	new->next = NULL;
+	return new;
+}
