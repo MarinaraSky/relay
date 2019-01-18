@@ -1,12 +1,10 @@
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
 
 int main(int argc, __attribute__((unused)) char **argv)
 {
@@ -15,29 +13,43 @@ int main(int argc, __attribute__((unused)) char **argv)
 		fprintf(stderr, "This program does not support arguments.\n");
 		exit(1);
 	}	
-	char *keyValue = getenv("RELAY");
-	if(keyValue)
+	char *end; 
+	char *relayEnv = getenv("RELAY");
+	if(!relayEnv)
 	{
-		key_t unique = ftok(keyValue, 99);
-
-		int message = shmget(unique, 4096, 0666|IPC_CREAT);
-		char *test = shmat(message, 0, 0);
-
-		/*
-		int testLock = shmget(unique, 1024, 0666|IPC_CREAT);
-		sem_t lock = shmat(testLock, 0, 0);
-		*/
-		sem_t *lock = sem_open("/test1", O_RDWR);
-
-		while(1)
+		fprintf(stderr, "RELAY environmental variable must be set.\n");
+		exit(1);
+	}
+	long portNum = strtol(relayEnv, &end, 0);
+	if(*end == '\0' && portNum > 10024)
+	{
+		int fd = socket(AF_INET, SOCK_STREAM, 0);
+		if(fd == 0)
 		{
-			sem_wait(lock);
-			printf("Test: %s\n", test);
-			sem_post(lock);
+			perror("Unable to create socket.\n");
+			exit(1);
 		}
-
-		
-		//shmdt(test);
+		struct sockaddr_in serverAddress = {
+			.sin_family = AF_INET,
+			.sin_port = htons(portNum)
+		};
+		if(inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr) != 1)
+		{
+			fprintf(stderr, "Invalid server IP.\n");
+			exit(1);
+		}
+		if(connect(fd, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
+		{
+			fprintf(stderr, "Cannot connect to server.\n");
+			exit(1);
+		}
+		char received[4096] = {0};
+		int numRecieved = 1;
+		while(numRecieved > 0)
+		{
+			numRecieved = read(fd, received, 4095);
+			printf("%s\n", received);
+		}
 	}
 	else
 	{
