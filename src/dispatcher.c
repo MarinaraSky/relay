@@ -170,7 +170,7 @@ void addConnection(int socketNum)
 
 llist *newConnection(int fileDesc)
 {
-	llist *new = malloc(sizeof(new));
+	llist *new = malloc(sizeof(*new));
 	if(new == NULL)
 	{
 		perror("Out of Memory.");
