@@ -25,9 +25,10 @@ typedef void *(*func_f)(void *);
 void *listenConnection(socketStruct *mySock);
 void addConnection(int socketNum);
 llist *newConnection(int fileDesc);
+void removeConnection(int fileDesc);
 void destroyLL(void);
 
-void ignoreSIGINT(int sig_num)
+void ignoreSIGINT(__attribute__((unused))int sig_num)
 {
 	fprintf(stderr, "Must hit CTRL+D to exit.\n");
 }
@@ -46,6 +47,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 		.sa_flags = SA_RESTART
 	};
 	sigaction(SIGINT, &ignore, NULL);
+	signal(SIGPIPE, SIG_IGN);
 	char *end; 
 	char *relayEnv = getenv("RELAY");
 	if(!relayEnv)
@@ -107,7 +109,11 @@ int main(int argc, __attribute__((unused))  char **argv)
 			while(index != NULL)
 			{
 				//check to see if still listening
-				send(index->fileDesc, line, sizeof(line), 0);
+				int isSent = send(index->fileDesc, line, length, 0);
+				if(isSent == -1)
+				{
+					removeConnection(index->fileDesc);
+				}
 				index = index->next;
 			}
 			free(line);
@@ -141,6 +147,7 @@ void addConnection(int socketNum)
 	if(head == NULL)
 	{
 		head = newConnection(socketNum);
+		head->next = NULL;
 		return;
 	}
 	while(index->next != NULL)
@@ -156,6 +163,36 @@ llist *newConnection(int fileDesc)
 	new->fileDesc = fileDesc;
 	new->next = NULL;
 	return new;
+}
+
+void removeConnection(int fileDesc)
+{
+	llist *index = head;
+	llist *rem = index;
+	if(index->fileDesc == fileDesc)
+	{
+		rem = head;
+		printf("Removing1 %d\n", fileDesc);
+		if(head->next == NULL)
+		{
+			printf("head\n");
+			head = NULL;
+		}
+		else
+		{
+			printf("nothead\n");
+			head = head->next;
+		}
+		free(rem);
+		return;
+	}
+	while(index->next->fileDesc != fileDesc)
+	{
+		printf("Removing %d\n", fileDesc);
+		index = index->next;
+	}
+	index->next = index->next->next;
+
 }
 
 void destroyLL(void)
