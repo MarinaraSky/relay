@@ -25,6 +25,7 @@ typedef void *(*func_f)(void *);
 void *listenConnection(socketStruct *mySock);
 void addConnection(int socketNum);
 llist *newConnection(int fileDesc);
+void destroyLL(void);
 
 void ignoreSIGINT(int sig_num)
 {
@@ -90,17 +91,26 @@ int main(int argc, __attribute__((unused))  char **argv)
 		pthread_detach(p1);
 		while(1)
 		{
-			char *line;
+			char *line = NULL;
 			long unsigned lineLen;
-			printf("Enter Message\n");
-			getline(&line, &lineLen, stdin);
+			int length = getline(&line, &lineLen, stdin);
+			if(length == -1)
+			{
+				free(line);
+				if(head != NULL)
+				{
+					destroyLL();
+				}
+				exit(1);
+			}
 			llist *index = head;
 			while(index != NULL)
 			{
-				printf("Sending: %d\n", index->fileDesc);
+				//check to see if still listening
 				send(index->fileDesc, line, sizeof(line), 0);
 				index = index->next;
 			}
+			free(line);
 		}
 	}
 	else
@@ -120,7 +130,6 @@ void *listenConnection(socketStruct *mySock)
 		socketNum = accept(mySock->socketFd, mySock->address, (socklen_t *)&mySock->sockaddrlen);
 		if(socketNum > 0)
 		{
-			printf("Creating: %d \n", socketNum);
 			addConnection(socketNum);
 		}
 	}
@@ -132,12 +141,13 @@ void addConnection(int socketNum)
 	if(head == NULL)
 	{
 		head = newConnection(socketNum);
+		return;
 	}
-	while(index != NULL)
+	while(index->next != NULL)
 	{
 		index = index->next;
 	}
-	index = newConnection(socketNum);
+	index->next = newConnection(socketNum);
 }
 
 llist *newConnection(int fileDesc)
@@ -146,4 +156,16 @@ llist *newConnection(int fileDesc)
 	new->fileDesc = fileDesc;
 	new->next = NULL;
 	return new;
+}
+
+void destroyLL(void)
+{
+	llist *index = head;
+	while(index->next != NULL)
+	{
+		index = head->next;
+		free(head);
+		head = index;
+	}
+	free(head);
 }
