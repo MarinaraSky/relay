@@ -85,13 +85,35 @@ static llist *head = NULL;
  */
 static pthread_mutex_t lock;
 
+/**
+ * @brief Global static used to limit number of clients.
+ * Went with 99 because it seemed like a good idea.
+ */
+static long maxConnection = 99;
+
+/**
+ * @brief Global static used to track number of clients.
+ */
+static long currentConnection = 0;
+
 int main(int argc, __attribute__((unused))  char **argv)
 {
-	if(argc > 1)
+	int opt = 0;
+	char *pEnd;
+	while((opt = getopt(argc, argv, "l:")) != -1)
 	{
-		fprintf(stderr, "This program does not support arguments.\n");
-		exit(1);
-	}	
+		switch(opt)
+		{
+			case 'l':
+			{
+				long newMax = strtol(optarg, &pEnd, 0);
+				if(*pEnd == '\0' && newMax > 0)
+				{
+					maxConnection = newMax;		
+				}
+			}
+		}
+	}
 	/**
 	 * @brief Sigaction used to call signal hander function
 	 */
@@ -239,6 +261,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 				if(isSent == -1)
 				{
 					removeConnection(index->fileDesc);
+					currentConnection--;
 				}
 				index = index->next;
 			}
@@ -267,12 +290,19 @@ void *listenConnection(socketStruct *mySock)
 	 * @brief Starts listening on sockets file descriptor
 	 */
 	listen(mySock->socketFd, 2);
+	const char *error = "Client max reached.";
 	while(1)
 	{
 		/**
 		 * @brief Accepts incoming connections from clients
 		 */
 		socketNum = accept(mySock->socketFd, mySock->address, (socklen_t *)&mySock->sockaddrlen);
+		if(currentConnection >= maxConnection)
+		{
+			send(socketNum, error, strlen(error), 0);
+			shutdown(socketNum, 2);
+			return NULL;
+		}
 		if(socketNum > 0)
 		{
 			/**
@@ -280,6 +310,7 @@ void *listenConnection(socketStruct *mySock)
 			 */
 			pthread_mutex_lock(&lock);
 			addConnection(socketNum);
+			currentConnection++;
 			pthread_mutex_unlock(&lock);
 		}
 	}
