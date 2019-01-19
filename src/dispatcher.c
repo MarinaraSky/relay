@@ -128,7 +128,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 			case 'h':
 			{
 				printf("USAGE: ./dispatcher [-l <limit>]\n");
-				break;
+				exit(1);
 			}
 			default:
 			{
@@ -317,7 +317,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 	}
 	else
 	{
-		fprintf(stderr, "RELAY variable must be between 10025 and 20026.\n");
+		fprintf(stderr, "RELAY variable must be between 10025 and 20025.\n");
 		exit(1);
 	}
 	return 0;
