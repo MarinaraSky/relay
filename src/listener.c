@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <string.h>
 
 
 int main(int argc, __attribute__((unused)) char **argv)
@@ -28,7 +29,8 @@ int main(int argc, __attribute__((unused)) char **argv)
 		exit(1);
 	}
 	/**
-	 * @brief Port number as a long to connect to. */
+	 * @brief Port number as a long to connect to. 
+	 * */
 	long portNum = strtol(relayEnv, &end, 0);
 	if(*end == '\0' && portNum > 10024 && portNum < 20025)
 	{
@@ -68,15 +70,16 @@ int main(int argc, __attribute__((unused)) char **argv)
 		/**
 		 * @brief Buffer to store data from server
 		 */
-		char received[4096] = {0};
+		char recieved[4096] = {0};
 		/**
 		 * @brief Integer used to break loop if server closes.
 		 */
 		int numRecieved = 1;
 		while(numRecieved > 0)
 		{
-			numRecieved = read(fd, received, 4095);
-			printf("%s", received);
+			memset(recieved, 0, sizeof(recieved));
+			numRecieved = read(fd, recieved, 4095);
+			printf("%s", recieved);
 		}
 	}
 	else

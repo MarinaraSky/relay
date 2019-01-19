@@ -98,12 +98,24 @@ static long currentConnection = 0;
 
 int main(int argc, __attribute__((unused))  char **argv)
 {
+	/**
+	 * @brief Used for getopt and switch case.
+	 */
 	int opt = 0;
+	/**
+	 * @brief Used for string verification from command line
+	 */
 	char *pEnd;
-	while((opt = getopt(argc, argv, "l:")) != -1)
+	/**
+	 * @brief Using getopt(3) to parse command line arguments
+	 */
+	while((opt = getopt(argc, argv, "hl:")) != -1)
 	{
 		switch(opt)
 		{
+			/**
+			 * @brief Limit switch
+			 */
 			case 'l':
 			{
 				long newMax = strtol(optarg, &pEnd, 0);
@@ -111,6 +123,16 @@ int main(int argc, __attribute__((unused))  char **argv)
 				{
 					maxConnection = newMax;		
 				}
+				break;
+			}
+			case 'h':
+			{
+				printf("USAGE: ./dispatcher [-l <limit>]\n");
+				break;
+			}
+			default:
+			{
+				fprintf(stderr, "USAGE: ./dispatcher [-l <limit>]\n");
 			}
 		}
 	}
@@ -212,12 +234,12 @@ int main(int argc, __attribute__((unused))  char **argv)
 		 */
 		pthread_create(&p1, NULL, (func_f)listenConnection, &mySock);
 		pthread_detach(p1);
+		/**
+		 * @brief Buffer to store input into.
+		 */
+		char *line = NULL;
 		while(1)
 		{
-			/**
-			 * @brief Buffer to store input into.
-			 */
-			char *line = NULL;
 			/**
 			 * @brief Set by getline(3).
 			 */
@@ -226,6 +248,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 			 * @brief Used to control how much data gets sent.
 			 */
 			int length = getline(&line, &lineLen, stdin);
+			line[length] = '\0';
 			/**
 			 * @brief Exit condition.
 			 * User entered CTRL+D
@@ -239,6 +262,13 @@ int main(int argc, __attribute__((unused))  char **argv)
 				}
 				pthread_mutex_destroy(&lock);
 				exit(1);
+			}
+			/**
+			 * @brief Not goint to talk to myself.
+			 */
+			if(currentConnection == 0)
+			{
+				continue;
 			}
 			/**
 			 * @brief Iterator used for sending to each file descriptor
@@ -269,8 +299,9 @@ int main(int argc, __attribute__((unused))  char **argv)
 			 * @brief Releasing lock.
 			 */
 			pthread_mutex_unlock(&lock);
-			free(line);
+			memset(line, 0, length);
 		}
+		free(line);
 	}
 	else
 	{
