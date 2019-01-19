@@ -133,7 +133,19 @@ int main(int argc, __attribute__((unused))  char **argv)
 			default:
 			{
 				fprintf(stderr, "USAGE: ./dispatcher [-l <limit>]\n");
+				exit(1);
 			}
+		}
+	}
+	/**
+	 * @brief Checking for other garbage not caught by getopt(3)
+	 */
+	for(int i = 1; i < argc; i++)
+	{
+		if(argv[i][0] != '-')
+		{
+			fprintf(stderr, "USAGE: ./dispatcher [-l <limit>]\n");
+			exit(1);
 		}
 	}
 	/**
