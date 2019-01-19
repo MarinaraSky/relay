@@ -87,7 +87,8 @@ int main(int argc, __attribute__((unused)) char **argv)
 		/**
 		 * @brief Error if RELAY isn't found
 		 */
-		fprintf(stderr, "RELAY environmental variable must be set.\n");
+		fprintf(stderr, "RELAY environmental variable must be"
+				"between 10025 and 20025.\n");
 		exit(1);
 	}
 	return 0;

@@ -128,24 +128,13 @@ int main(int argc, __attribute__((unused))  char **argv)
 			case 'h':
 			{
 				printf("USAGE: ./dispatcher [-l <limit>]\n");
-				break;
+				exit(1);
 			}
 			default:
 			{
 				fprintf(stderr, "USAGE: ./dispatcher [-l <limit>]\n");
 				exit(1);
 			}
-		}
-	}
-	/**
-	 * @brief Checking for other garbage not caught by getopt(3)
-	 */
-	for(int i = 1; i < argc; i++)
-	{
-		if(argv[i][0] != '-')
-		{
-			fprintf(stderr, "USAGE: ./dispatcher [-l <limit>]\n");
-			exit(1);
 		}
 	}
 	/**
@@ -317,7 +306,7 @@ int main(int argc, __attribute__((unused))  char **argv)
 	}
 	else
 	{
-		fprintf(stderr, "RELAY variable must be a number above 10024.\n");
+		fprintf(stderr, "RELAY variable must be between 10025 and 20025.\n");
 		exit(1);
 	}
 	return 0;
