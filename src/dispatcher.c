@@ -138,17 +138,6 @@ int main(int argc, __attribute__((unused))  char **argv)
 		}
 	}
 	/**
-	 * @brief Checking for other garbage not caught by getopt(3)
-	 */
-	for(int i = 1; i < argc; i++)
-	{
-		if(argv[i][0] != '-')
-		{
-			fprintf(stderr, "USAGE: ./dispatcher [-l <limit>]\n");
-			exit(1);
-		}
-	}
-	/**
 	 * @brief Sigaction used to call signal hander function
 	 */
 	struct sigaction ignore = {
